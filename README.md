@@ -1,76 +1,236 @@
-# Lab 3: Multi-Tenancy with Namespaces and Internal Routing
+# Kubernetes Multi-Tenancy Lab (Dev & Staging Environments)
 
-## Scenario
-Your team is adopting a "cluster per environment" strategy, but for cost reasons, you must use a single cluster for Development (dev) and Staging (staging) environments. You need to ensure logical separation and enable communication between two applications within the same namespace.
+## Project Overview
 
-## Lab Description
-The student will create two namespaces (dev and staging). They will deploy a two-tier application (a frontend and a backend) in the dev namespace and a separate instance in the staging namespace. They will use services for internal pod networking and demonstrate environment isolation.
+This project demonstrates how to run multiple environments inside a single Kubernetes cluster using **Namespaces**.
+
+Two isolated environments are deployed:
+
+* **Development (dev)**
+* **Staging (staging)**
+
+Each namespace contains a **two-tier application**:
+
+Frontend (NGINX) → Backend Service → Backend Pod (Python HTTP Server)
+
+The lab demonstrates:
+
+* Kubernetes Namespaces
+* Pod-to-Pod communication using Services
+* Reverse proxy configuration using NGINX
+* Multi-environment deployment
+* Environment isolation within the same cluster
 
 ---
-## Build Instructions for Students
 
-The students will need to build these Docker images before deploying to Kubernetes. build commands:
+# Architecture
 
+```
+                 Kubernetes Cluster
+                        │
+        ┌───────────────┴───────────────┐
+        │                               │
+      DEV Namespace                 STAGING Namespace
+        │                               │
+   Frontend Pod (NGINX)           Frontend Pod (NGINX)
+            │                             │
+            │ HTTP Proxy                  │ HTTP Proxy
+            ▼                             ▼
+     backend-service                backend-service
+            │                             │
+            ▼                             ▼
+      Backend Pod                   Backend Pod
+       Python App                    Python App
+```
 
-# Build backend image
-```bash
+Each namespace runs the same application but operates independently.
+
+---
+
+# Project Structure
+
+```
+assignment/
+│
+├── backend-app.py
+├── index.html
+├── nginx.conf
+│
+├── Dockerfile.backend
+├── Dockerfile.frontend
+│
+├── dev-environment.yaml
+├── staging-environment.yaml
+│
+├── screenshots
+│   ├── dev-resources.png
+│   ├── staging-resources.png
+│   └── application-ui.png
+│
+└── README.md
+```
+
+---
+
+# Backend Application
+
+The backend is a simple **Python HTTP server** running on port **8080**.
+
+Available endpoints:
+
+| Endpoint  | Description                           |
+| --------- | ------------------------------------- |
+| `/`       | Basic HTML page                       |
+| `/health` | Health check endpoint                 |
+| `/info`   | Returns Pod and namespace information |
+
+Example response:
+
+```
+{
+ "pod": "backend-pod",
+ "namespace": "dev",
+ "hostname": "backend-pod"
+}
+```
+
+---
+
+# Frontend Application
+
+The frontend uses **NGINX** to:
+
+* Serve the static web interface
+* Proxy API requests to the backend service
+
+Available API routes:
+
+```
+/api
+/api/info
+/api/health
+```
+
+The interface includes buttons to test backend connectivity.
+
+---
+
+# Build Docker Images
+
+Build the backend image:
+
+```
 docker build -f Dockerfile.backend -t backend-app:latest .
 ```
 
-# Build frontend image
+Build the frontend image:
+
 ```
 docker build -f Dockerfile.frontend -t frontend-app:latest .
 ```
 
-# If using minikube, load the images
+If using **Minikube**, load the images:
+
 ```
 minikube image load backend-app:latest
 minikube image load frontend-app:latest
 ```
 
---- 
+---
 
-## Tasks to Implement
+# Deploy Dev Environment
 
-1. Create two namespaces: `dev` and `staging`.
+```
+kubectl apply -f dev-environment.yaml
+```
 
-2. In the `dev` namespace, deploy a backend pod (a simple Python HTTP server or redis) and expose it via a ClusterIP service named `backend-service`.
+Check resources:
 
-3. In the `dev` namespace, deploy a frontend pod (nginx). Configure it so that it can communicate with the backend pod using the service name `backend-service`.
-
-4. Repeat steps 2 and 3 in the `staging` namespace, ensuring the frontend there communicates with its own local `backend-service`.
+```
+kubectl get pods,svc -n dev
+```
 
 ---
 
-## Notes for Students
+# Deploy Staging Environment
 
-- The backend server runs on port `8080` and provides three endpoints: `/`, `/health`, and `/info`
-
-- The frontend nginx is configured to proxy requests to the backend using the service name `backend-service`
-
-- The HTML interface provides buttons to test connectivity to different backend endpoints
-
-- Both applications display their pod name and namespace for easy identification when testing environment isolation
-
---- 
-> [!IMPORTANT]
-> Required Deliverables
-* Push your Puplic GitHub Repo to LMS
-# The repository should be structured as follows:
-1. dev-environment.yaml
-2. staging-environment.yaml
-3. README.md
-## The README.md file must include screenshots of the output from the following commands:
-
-- Ensure that the status of pods and services in dev and staging namespace are running
-```bash
-kubectl get pods,svc -n dev
 ```
-```bash
+kubectl apply -f staging-environment.yaml
+```
+
+Check resources:
+
+```
 kubectl get pods,svc -n staging
 ```
-- Execute port-forward to can access the app from the browser
-```bash 
+
+---
+
+# Access the Application
+
+Forward the frontend port:
+
+```
 kubectl port-forward pod/frontend-pod 8082:80 -n dev
 ```
-- open your browser at localhost:8082 then take the screenshot
+
+Open the application in your browser:
+
+```
+http://localhost:8082
+```
+
+---
+
+# Screenshots
+
+## Dev Namespace Resources
+
+Output of:
+
+```
+kubectl get pods,svc -n dev
+```
+
+![Dev Resources](screenshots/dev-resources.png)
+
+---
+
+## Staging Namespace Resources
+
+Output of:
+
+```
+kubectl get pods,svc -n staging
+```
+
+![Staging Resources](screenshots/staging-resources.png)
+
+---
+
+## Application Interface
+
+Frontend UI showing backend connectivity.
+
+![Application UI](screenshots/application-ui.png)
+
+---
+
+# Kubernetes Concepts Demonstrated
+
+This lab demonstrates several core Kubernetes concepts:
+
+* Namespaces for environment isolation
+* Pod networking
+* ClusterIP Services
+* Internal DNS communication
+* Reverse proxy architecture
+* Multi-tier application deployment
+
+---
+
+# Author
+
+Antonios Mounir
+Kubernetes Lab Assignment
+DevOps / Cloud Native Practice
