@@ -212,7 +212,7 @@ kubectl get pods,svc -n staging
 
 Frontend UI showing backend connectivity.
 
-![Application UI](screenshots/application-ui.png)
+![Application UI](screenshots/app-ui.png)
 
 ---
 
